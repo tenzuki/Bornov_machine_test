@@ -32,6 +32,19 @@ export const ProjectDetailPage: React.FC = () => {
   const [memberUserId, setMemberUserId] = useState('');
   const [memberSubmitting, setMemberSubmitting] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSystemUsers = async () => {
+      try {
+        const res = await apiClient.get('/auth/users');
+        setSystemUsers(res.data.data || []);
+      } catch {
+        // ignore
+      }
+    };
+    fetchSystemUsers();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -300,16 +313,59 @@ export const ProjectDetailPage: React.FC = () => {
 
             <form onSubmit={handleAddMember} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">User ID (UUID)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select User to Add</label>
+                <select
+                  value={memberUserId}
+                  onChange={(e) => setMemberUserId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                >
+                  <option value="">-- Choose User --</option>
+                  {systemUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.email}) - {u.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Or Enter User ID (UUID)</label>
                 <input
                   type="text"
                   required
                   value={memberUserId}
                   onChange={(e) => setMemberUserId(e.target.value)}
-                  placeholder="Enter User UUID to add..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  placeholder="e.g. 8f2d677e-1bbe-45be-a54c-e720ccd78156"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
+
+              {/* System Users Directory helper list inside modal */}
+              {systemUsers.length > 0 && (
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    📋 System User IDs Reference
+                  </div>
+                  <div className="space-y-1.5">
+                    {systemUsers.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between text-[11px] p-1.5 bg-slate-900/90 rounded-lg border border-slate-800">
+                        <div className="min-w-0 pr-2">
+                          <span className="font-semibold text-slate-200">{u.name}</span>{' '}
+                          <span className="text-slate-400">({u.role})</span>
+                          <div className="text-[10px] font-mono text-indigo-400 truncate">{u.id}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMemberUserId(u.id)}
+                          className="shrink-0 px-2 py-1 text-[10px] font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md transition-all"
+                        >
+                          Select
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
@@ -321,7 +377,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={memberSubmitting}
+                  disabled={memberSubmitting || !memberUserId.trim()}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
                 >
                   {memberSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

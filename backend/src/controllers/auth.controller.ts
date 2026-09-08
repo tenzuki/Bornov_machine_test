@@ -73,6 +73,15 @@ export class AuthController {
       data: { user },
     });
   });
+
+  getUsers = asyncHandler(async (req: Request, res: Response) => {
+    const users = await authService.getAllUsers();
+
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  });
 }
 
 export const authController = new AuthController();

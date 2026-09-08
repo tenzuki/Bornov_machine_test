@@ -8,7 +8,16 @@ import { logger } from '../utils/logger';
 export const securityHeaders = helmet();
 
 export const corsMiddleware = cors({
-  origin: env.CORS_ORIGIN,
+  origin: (origin, callback) => {
+    // In development mode or for same-origin server requests, allow all origins
+    if (env.NODE_ENV === 'development' || !origin) {
+      return callback(null, true);
+    }
+    if (origin === env.CORS_ORIGIN || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

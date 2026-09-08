@@ -1,15 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { logout } from '../store/slices/authSlice';
 import { apiClient } from '../api/client';
-import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, CheckSquare, LogOut, User as UserIcon, Users, Copy, Check, X } from 'lucide-react';
 
 export const MainLayout: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
+
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleOpenUsersModal = async () => {
+    setIsUsersModalOpen(true);
+    try {
+      const res = await apiClient.get('/auth/users');
+      setUsersList(res.data.data || []);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleCopyId = (idToCopy: string) => {
+    navigator.clipboard.writeText(idToCopy);
+    setCopiedId(idToCopy);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleLogout = async () => {
     try {
@@ -93,8 +113,17 @@ export const MainLayout: React.FC = () => {
             </NavLink>
           </nav>
 
-          {/* User Profile & Logout */}
+          {/* User Profile & Directory */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleOpenUsersModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl transition-all"
+              title="View All Users & Copy User IDs"
+            >
+              <Users className="h-4 w-4 text-indigo-400" />
+              <span className="hidden md:inline">Users Directory</span>
+            </button>
+
             {user && (
               <div className="flex items-center gap-2.5 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
                 <div className="h-7 w-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
@@ -130,6 +159,87 @@ export const MainLayout: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
         <Outlet />
       </main>
+
+      {/* Users Directory Modal */}
+      {isUsersModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">System Users Directory</h3>
+                  <p className="text-xs text-slate-400">View user profiles and copy User IDs to manage project team members and task assignments</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsUsersModalOpen(false)}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-800 rounded-2xl max-h-96 overflow-y-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-800 sticky top-0">
+                  <tr>
+                    <th className="p-3">User Name & Email</th>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">User ID (UUID)</th>
+                    <th className="p-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {usersList.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-3">
+                        <div className="font-semibold text-slate-200">{u.name}</div>
+                        <div className="text-[10px] text-slate-400">{u.email}</div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getRoleBadge(u.role)}`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="p-3 font-mono text-[11px] text-indigo-400 select-all">{u.id}</td>
+                      <td className="p-3 text-right">
+                        <button
+                          onClick={() => handleCopyId(u.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition-all"
+                        >
+                          {copiedId === u.id ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-400" />
+                              <span className="text-emerald-400 font-semibold">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 text-slate-400" />
+                              <span>Copy ID</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setIsUsersModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

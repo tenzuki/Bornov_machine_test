@@ -12,11 +12,11 @@ import {
 } from '../store/slices/taskSlice';
 import { fetchProjects } from '../store/slices/projectSlice';
 import { Task, TaskStatus, TaskPriority } from '../types';
+import { apiClient } from '../api/client';
 import {
   CheckSquare,
   Plus,
   Search,
-  Filter,
   Edit2,
   Trash2,
   Calendar,
@@ -50,10 +50,16 @@ export const TasksPage: React.FC = () => {
   const [assignedToId, setAssignedToId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
 
-  // Fetch available projects for dropdown
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeSystemUsers = Array.isArray(systemUsers) ? systemUsers : [];
+
+  // Fetch available projects and system users
   useEffect(() => {
     dispatch(fetchProjects({ limit: 100 }));
+    apiClient.get('/auth/users').then((res) => setSystemUsers(res.data.data || [])).catch(() => {});
   }, [dispatch]);
 
   // Debounce search input & fetch tasks when filters or page changes
@@ -84,7 +90,7 @@ export const TasksPage: React.FC = () => {
     setDescription('');
     setStatus('TODO');
     setPriority('MEDIUM');
-    setProjectId(projects.length > 0 ? projects[0].id : '');
+    setProjectId(safeProjects.length > 0 ? safeProjects[0].id : '');
     setAssignedToId('');
     setDueDate('');
     setIsModalOpen(true);
@@ -93,11 +99,11 @@ export const TasksPage: React.FC = () => {
   const handleOpenEditModal = (task: Task) => {
     dispatch(clearTaskError());
     setEditingTask(task);
-    setTitle(task.title);
+    setTitle(task.title || '');
     setDescription(task.description || '');
-    setStatus(task.status);
-    setPriority(task.priority);
-    setProjectId(task.projectId);
+    setStatus(task.status || 'TODO');
+    setPriority(task.priority || 'MEDIUM');
+    setProjectId(task.projectId || '');
     setAssignedToId(task.assignedToId || '');
     setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
     setIsModalOpen(true);
@@ -167,7 +173,7 @@ export const TasksPage: React.FC = () => {
     task.createdById === user?.id ||
     task.assignedToId === user?.id;
 
-  const getStatusBadge = (s: TaskStatus) => {
+  const getStatusBadge = (s?: string) => {
     switch (s) {
       case 'DONE':
         return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
@@ -178,7 +184,7 @@ export const TasksPage: React.FC = () => {
     }
   };
 
-  const getPriorityBadge = (p: TaskPriority) => {
+  const getPriorityBadge = (p?: string) => {
     switch (p) {
       case 'HIGH':
         return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
@@ -270,7 +276,7 @@ export const TasksPage: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-all"
             >
               <option value="">All Projects</option>
-              {projects.map((p) => (
+              {safeProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -333,7 +339,7 @@ export const TasksPage: React.FC = () => {
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
             <span className="text-xs">Fetching tasks...</span>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : safeTasks.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <CheckSquare className="h-12 w-12 text-slate-600 mx-auto" />
             <h3 className="text-base font-bold text-white">No tasks found</h3>
@@ -343,16 +349,16 @@ export const TasksPage: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-slate-800/60">
-            {tasks.map((task) => (
+            {safeTasks.map((task) => (
               <div key={task.id} className="p-4 hover:bg-slate-800/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-sm text-slate-100 truncate">{task.title}</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getStatusBadge(task.status)}`}>
-                      {task.status.replace('_', ' ')}
+                      {(task.status || 'TODO').replace('_', ' ')}
                     </span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getPriorityBadge(task.priority)}`}>
-                      {task.priority}
+                      {task.priority || 'MEDIUM'}
                     </span>
                   </div>
 
@@ -378,7 +384,7 @@ export const TasksPage: React.FC = () => {
                 {/* Inline Quick Status Switcher & Actions */}
                 <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
                   <select
-                    value={task.status}
+                    value={task.status || 'TODO'}
                     onChange={(e) => handleStatusQuickChange(task, e.target.value as TaskStatus)}
                     className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 focus:outline-none"
                   >
@@ -463,8 +469,8 @@ export const TasksPage: React.FC = () => {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Implement JWT Auth Flow"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                  placeholder="Task title..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
 
@@ -474,8 +480,8 @@ export const TasksPage: React.FC = () => {
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detailed task requirements..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                  placeholder="Task description and acceptance criteria..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition-all resize-none"
                 />
               </div>
 
@@ -516,7 +522,7 @@ export const TasksPage: React.FC = () => {
                     onChange={(e) => setProjectId(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
-                    {projects.map((p) => (
+                    {safeProjects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
@@ -527,14 +533,19 @@ export const TasksPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Assignee User ID (Optional)</label>
-                  <input
-                    type="text"
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Assignee (Optional)</label>
+                  <select
                     value={assignedToId}
                     onChange={(e) => setAssignedToId(e.target.value)}
-                    placeholder="User UUID..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {safeSystemUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role}) - {u.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -548,7 +559,7 @@ export const TasksPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4">
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -562,7 +573,7 @@ export const TasksPage: React.FC = () => {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{editingTask ? 'Save Task' : 'Create Task'}</span>
+                  <span>{editingTask ? 'Save Changes' : 'Create Task'}</span>
                 </button>
               </div>
             </form>

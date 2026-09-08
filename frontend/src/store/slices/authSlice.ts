@@ -28,7 +28,12 @@ export const loginUser = createAsyncThunk(
       const response = await apiClient.post('/auth/login', credentials);
       return response.data.data;
     } catch (err: any) {
-      const message = err.response?.data?.error?.message || 'Login failed. Please check credentials.';
+      const message =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK' || !err.response
+          ? `Network Error: Cannot reach backend server at ${apiClient.defaults.baseURL}`
+          : err.message || 'Login failed. Please check credentials.');
       return rejectWithValue(message);
     }
   }

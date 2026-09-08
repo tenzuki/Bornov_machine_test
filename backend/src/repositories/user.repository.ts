@@ -36,6 +36,17 @@ export class UserRepository {
     const { passwordHash, ...sanitized } = user;
     return sanitized;
   }
+
+  async findAll() {
+    const users = await prisma.user.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return users.map((u) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, ...sanitized } = u;
+      return sanitized;
+    });
+  }
 }
 
 export const userRepository = new UserRepository();

@@ -107,6 +107,10 @@ export class AuthService {
     }
     return userRepository.sanitizeUser(user);
   }
+
+  async getAllUsers() {
+    return userRepository.findAll();
+  }
 }
 
 export const authService = new AuthService();

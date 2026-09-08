@@ -23,10 +23,14 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (roleEmail: string) => {
+  const handleQuickFill = async (roleEmail: string) => {
     dispatch(clearAuthError());
     setEmail(roleEmail);
     setPassword('Password123!');
+    const result = await dispatch(loginUser({ email: roleEmail, password: 'Password123!' }));
+    if (loginUser.fulfilled.match(result)) {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -45,7 +49,7 @@ export const LoginPage: React.FC = () => {
         {/* Quick Fill Demo Credentials */}
         <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-2">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">
-            ⚡ Quick Demo Accounts
+            ⚡ 1-Click Demo Logins
           </div>
           <div className="grid grid-cols-3 gap-2">
             <button
@@ -69,6 +73,9 @@ export const LoginPage: React.FC = () => {
             >
               User
             </button>
+          </div>
+          <div className="text-[10px] text-center text-slate-500 font-mono pt-0.5">
+            Password: <span className="text-slate-300 font-semibold">Password123!</span>
           </div>
         </div>
 
