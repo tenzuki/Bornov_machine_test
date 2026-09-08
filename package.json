@@ -1,0 +1,16 @@
+{
+  "name": "task-collaboration-system",
+  "version": "1.0.0",
+  "description": "Full-Stack Task Collaboration System",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "seed": "cd backend && npm run prisma:seed",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down"
+  }
+}
